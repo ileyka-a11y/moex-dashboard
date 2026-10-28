@@ -2,8 +2,8 @@ name: Снимок котировок
 
 on:
   schedule:
-    # 10:05, 13:05, 16:05, 19:05, 22:05 по Москве (UTC+3), будни
-    - cron: "5 7,10,13,16,19 * * 1-5"
+    # каждые 30 минут с 07:00 до 23:30 по Москве (UTC+3), будни
+    - cron: "*/30 4-20 * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -27,11 +27,12 @@ jobs:
       - name: Котировки Мосбиржи
         run: python scripts/snapshot.py
 
-      - name: Дивиденды (раз в день, первый запуск)
-        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '5 7,10,13,16,19 * * 1-5'
+      - name: Дивиденды (раз в день, около 10:00 МСК)
         run: |
-          if [ "$(TZ=Europe/Moscow date +%H)" -lt 11 ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "$(TZ=Europe/Moscow date +%H)" = "10" ] && [ "$(TZ=Europe/Moscow date +%M)" -lt 30 ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             python scripts/dividends.py
+          else
+            echo "Дивиденды обновляются один раз в день"
           fi
 
       - name: Сохранить данные

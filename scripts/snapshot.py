@@ -3,7 +3,7 @@
 
 Пишет:
   data/latest.json             — последний снимок
-  data/history/YYYY-MM.json    — все снимки месяца (для графиков истории)
+  data/history/YYYY-MM-DD.json — все снимки дня (для графиков истории)
   data/history/index.json      — список месяцев с историей
 Без внешних зависимостей: только стандартная библиотека Python.
 """
@@ -79,10 +79,10 @@ def main():
     json.dump(snap, open(os.path.join(DATA, "latest.json"), "w", encoding="utf-8"),
               ensure_ascii=False, separators=(",", ":"))
 
-    month = now.strftime("%Y-%m")
+    day = now.strftime("%Y-%m-%d")
     hdir = os.path.join(DATA, "history")
     os.makedirs(hdir, exist_ok=True)
-    hpath = os.path.join(hdir, f"{month}.json")
+    hpath = os.path.join(hdir, f"{day}.json")
     hist = json.load(open(hpath, encoding="utf-8")) if os.path.exists(hpath) else {"times": [], "imoex": [], "px": {}}
     n = len(hist["times"])
     hist["times"].append(snap["time"])
@@ -95,11 +95,9 @@ def main():
     json.dump(hist, open(hpath, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
 
     ipath = os.path.join(hdir, "index.json")
-    index = json.load(open(ipath)) if os.path.exists(ipath) else {"months": []}
-    if month not in index["months"]:
-        index["months"].append(month)
-        index["months"].sort()
-    json.dump(index, open(ipath, "w"))
+    index = json.load(open(ipath)) if os.path.exists(ipath) else {}
+    days = sorted(set(index.get("days", [])) | {day})
+    json.dump({"days": days}, open(ipath, "w"))
 
     print(f"Снимок {snap['time']}: цен {traded} из {len(tickers)}, IMOEX {imoex['last']}")
 

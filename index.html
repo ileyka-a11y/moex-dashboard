@@ -134,7 +134,7 @@ svg text{fill:var(--muted);font-size:11px}
   <section class="tab" id="tab-hist">
     <div class="card">
       <h2>История снимков</h2>
-      <p class="note">Снимки делаются автоматически по будням в 10:05, 13:05, 16:05, 19:05 и 22:05 (МСК). Выберите бумагу.</p>
+      <p class="note">Снимки делаются автоматически каждые 30 минут по будням с 07:00 до 23:30 (МСК); показаны последние 10 дней. Выберите бумагу.</p>
       <div class="filters"><label>Бумага <input id="hTicker" list="tickers" value="IMOEX" class="in"></label><span class="small muted" id="hInfo"></span></div>
       <div id="hChart"></div>
       <div class="tw" id="hTable" style="margin-top:10px;max-height:40vh"></div>
@@ -228,14 +228,15 @@ async function loadAll(){
   Object.assign(S,d);
   const t = S.live ? (S.time? 'биржа, '+dfmt(S.time.slice(0,10))+' '+S.time.slice(11,16)+' МСК (задержка ~15 мин)':'биржа') :
                      'последний автоснимок '+dfmt(S.time.slice(0,10))+' '+S.time.slice(11,16)+' МСК';
-  $('status').innerHTML = `Цены: <b>${esc(t)}</b>${S.live?'':' — прямой доступ к бирже не удался'} · обновлено в ${new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})} · автообновление каждые 3 часа`;
+  $('status').innerHTML = `Цены: <b>${esc(t)}</b>${S.live?'':' — прямой доступ к бирже не удался'} · обновлено в ${new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})} · автообновление каждые 30 минут`;
   compute(); renderEverything();
 }
 async function loadHist(){
   if(S.hist) return S.hist;
   const idx = await getJSON('data/history/index.json');
   const H={times:[],imoex:[],px:{}};
-  for(const m of idx.months.slice(-3)){
+  const days = idx.days || [];
+  for(const m of days.slice(-10)){
     const h = await getJSON(`data/history/${m}.json`); const n=H.times.length;
     H.times.push(...h.times); H.imoex.push(...h.imoex);
     const keys=new Set([...Object.keys(H.px),...Object.keys(h.px)]);
@@ -460,7 +461,7 @@ buildCalc();
 const ui=LS.get('ui',null);
 loadAll().then(()=>{ if(ui){ if(ui.sec)$('fSector').value=ui.sec; if(ui.liq)$('fLiq').value=ui.liq; renderDash(); renderStocks();
   const b=document.querySelector(`nav button[data-tab="${ui.tab}"]`); if(b) b.click(); }});
-setInterval(()=>{S.hist=null;loadAll()}, 3*3600*1000);
+setInterval(()=>{S.hist=null;loadAll()}, 30*60*1000);
 })();
 </script>
 </body>
