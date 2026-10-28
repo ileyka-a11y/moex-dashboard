@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Акции Мосбиржи — дашборд и калькулятор</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231f3864'/><path d='M6 22l6-7 5 4 9-11' stroke='%2363be7b' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<style>
+:root{
+  --bg:#f6f7f9;--panel:#fff;--fg:#1b2430;--muted:#5d6b7a;--line:#e3e7ec;--accent:#1f3864;--accent2:#2f6fd0;
+  --up:#0a7a3b;--down:#c0262d;--upbg:#e3f4ea;--downbg:#fbe5e6;--hl:#fff7d6;--input:#fffbe6;
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.05);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --bg:#11161d;--panel:#19212b;--fg:#e6ebf1;--muted:#93a1b0;--line:#2a3542;--accent:#8fb3ff;--accent2:#6ea0ff;
+  --up:#4cc27e;--down:#ff6b6b;--upbg:#173326;--downbg:#3a1c1f;--hl:#2e2a17;--input:#262414;--shadow:none}}
+:root[data-theme=dark]{
+  --bg:#11161d;--panel:#19212b;--fg:#e6ebf1;--muted:#93a1b0;--line:#2a3542;--accent:#8fb3ff;--accent2:#6ea0ff;
+  --up:#4cc27e;--down:#ff6b6b;--upbg:#173326;--downbg:#3a1c1f;--hl:#2e2a17;--input:#262414;--shadow:none}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+header{position:sticky;top:0;z-index:20;background:var(--panel);border-bottom:1px solid var(--line)}
+.wrap{max-width:1400px;margin:0 auto;padding:0 16px}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:10px 0}
+h1{font-size:18px;margin:0;color:var(--accent)}
+.status{color:var(--muted);font-size:12px;flex:1;min-width:200px}
+.status b{color:var(--fg);font-weight:600}
+button,.btn{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--accent2)}
+button.primary{background:var(--accent2);border-color:var(--accent2);color:#fff}
+nav{display:flex;gap:4px;overflow-x:auto}
+nav button{border:none;border-bottom:3px solid transparent;border-radius:0;padding:8px 12px;background:none;white-space:nowrap;color:var(--muted)}
+nav button.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+main{padding:16px 0 40px}
+.tab{display:none}.tab.on{display:block}
+.filters{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:14px}
+.filters label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+select,input{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:5px 8px}
+input.in,select.in{background:var(--input)}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:var(--shadow);min-width:0}
+.card h2{font-size:14px;margin:0 0 4px}
+.card .note{font-size:12px;color:var(--muted);margin:0 0 10px}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi .v{font-size:24px;font-variant-numeric:tabular-nums;margin-top:2px}
+.kpi .s{font-size:12px;color:var(--muted);margin-top:2px}
+.up{color:var(--up)}.down{color:var(--down)}
+.tw{overflow:auto;max-width:100%}
+.tw.tall{max-height:72vh}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{position:sticky;top:0;background:var(--panel);font-size:12px;color:var(--muted);font-weight:600;z-index:1}
+th.s{cursor:pointer;user-select:none}th.s:hover{color:var(--accent2)}
+th[aria-sort=ascending]::after{content:" ▲"}th[aria-sort=descending]::after{content:" ▼"}
+td.l,th.l{text-align:left}
+td.name{color:var(--accent);font-weight:600;cursor:help}
+td.pos{background:var(--upbg)}td.neg{background:var(--downbg)}
+td.next{color:var(--up);font-weight:600}
+tr.hl td{background:var(--hl)}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+#tip{position:fixed;z-index:50;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:10px 12px;font-size:12px;max-width:320px;display:none}
+#tip h4{margin:0 0 6px;font-size:13px}
+#tip .r{display:flex;justify-content:space-between;gap:16px}
+.bar{height:14px;border-radius:3px}
+.rows{display:grid;gap:6px}
+.brow{display:grid;grid-template-columns:minmax(90px,160px) 1fr 64px;gap:8px;align-items:center;font-size:12px}
+.btrack{position:relative;height:14px}
+.btrack .z{position:absolute;left:50%;top:-2px;bottom:-2px;border-left:1px solid var(--line)}
+.btrack .bar{position:absolute;top:0}
+.params{display:grid;gap:10px 16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr))}
+.params label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.calc input{width:100%;min-width:70px}
+.sum{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr))}
+.warn{color:var(--down);font-weight:600}
+svg text{fill:var(--muted);font-size:11px}
+.foot{color:var(--muted);font-size:12px;margin-top:16px}
+.foot a{color:var(--accent2)}
+.loading{padding:40px;text-align:center;color:var(--muted)}
+@media (max-width:640px){.kpi .v{font-size:20px}h1{font-size:16px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <h1>Акции Мосбиржи</h1>
+      <div class="status" id="status">Загрузка…</div>
+      <button class="primary" id="refresh">Обновить сейчас</button>
+      <button id="theme" title="Светлая/тёмная тема">Тема</button>
+    </div>
+    <nav id="nav">
+      <button data-tab="dash" class="on">Дашборд</button>
+      <button data-tab="all">Все акции</button>
+      <button data-tab="hist">История снимков</button>
+      <button data-tab="calc">Калькулятор</button>
+    </nav>
+  </div>
+</header>
+<main class="wrap">
+  <div class="filters" id="filters">
+    <label>Сектор <select id="fSector"></select></label>
+    <label>Ликвидность <select id="fLiq">
+      <option value="Все">Все</option><option value="Высокая" selected>Высокая (топ-50)</option>
+      <option value="Средняя">Средняя</option><option value="Низкая">Низкая</option><option value="Нет сделок">Нет сделок</option>
+    </select></label>
+    <label>Поиск <input id="fSearch" type="search" placeholder="тикер или название"></label>
+    <span class="small muted" id="fCount"></span>
+  </div>
+
+  <section class="tab on" id="tab-dash">
+    <div class="kpis" id="kpis"></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))">
+      <div class="card"><h2>Лидеры сегодня</h2><p class="note">к закрытию прошлого торгового дня, по фильтру</p><div class="tw" id="topToday"></div></div>
+      <div class="card"><h2>Аутсайдеры сегодня</h2><p class="note">к закрытию прошлого торгового дня, по фильтру</p><div class="tw" id="botToday"></div></div>
+      <div class="card"><h2>Лидеры за 3 недели</h2><p class="note">02.10 → 23.10, по фильтру</p><div class="tw" id="top3w"></div></div>
+      <div class="card"><h2>Аутсайдеры за 3 недели</h2><p class="note">02.10 → 23.10, по фильтру</p><div class="tw" id="bot3w"></div></div>
+    </div>
+    <div class="grid" style="margin-top:14px">
+      <div class="card"><h2>Сектора сегодня</h2><p class="note">среднее изменение бумаг сектора, с учётом фильтра ликвидности</p><div id="secBars"></div></div>
+      <div class="card"><h2>Сектора: сводка</h2><p class="note">среднее по бумагам сектора</p><div class="tw" id="secTable"></div></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-all">
+    <div class="card">
+      <h2>Все акции</h2>
+      <p class="note">Наведите курсор на название (на телефоне — нажмите), чтобы увидеть подробности. Нажмите на заголовок столбца для сортировки. Зелёным — объявленные ближайшие дивиденды.</p>
+      <div class="tw tall" id="allTable"></div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-hist">
+    <div class="card">
+      <h2>История снимков</h2>
+      <p class="note">Снимки делаются автоматически по будням в 10:05, 13:05, 16:05, 19:05 и 22:05 (МСК). Выберите бумагу.</p>
+      <div class="filters"><label>Бумага <input id="hTicker" list="tickers" value="IMOEX" class="in"></label><span class="small muted" id="hInfo"></span></div>
+      <div id="hChart"></div>
+      <div class="tw" id="hTable" style="margin-top:10px;max-height:40vh"></div>
+    </div>
+  </section>
+
+  <section class="tab calc" id="tab-calc">
+    <div class="card" style="margin-bottom:14px">
+      <h2>Параметры</h2>
+      <p class="note">Жёлтые поля — для заполнения. Всё сохраняется в этом браузере. Это инструмент для расчёта, а не рекомендация.</p>
+      <div class="params">
+        <label>Бюджет, ₽<input class="in" id="cBudget" type="number" min="0" step="1000" value="100000"></label>
+        <label>Комиссия брокера, % от сделки<input class="in" id="cCom" type="number" min="0" step="0.01" value="0.05"></label>
+        <label>Ставка НДФЛ, %<input class="in" id="cTax" type="number" min="0" step="1" value="13"></label>
+        <label>Дата покупки<input class="in" id="cDate" type="date"></label>
+        <label>Горизонт для итога<select class="in" id="cHz"></select></label>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <h2>Позиции</h2>
+      <p class="note">Тикер — из списка. Цена покупки по умолчанию — текущая цена; впишите свою, если нужно. Прогноз — ваше ожидание изменения цены за 12 месяцев. Дивиденды — % годовых.</p>
+      <div class="tw" id="cPos"></div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button id="cClear">Очистить позиции</button><span class="small" id="cCheck"></span></div>
+    </div>
+    <div class="sum" id="cSum" style="margin-bottom:14px"></div>
+    <div class="grid">
+      <div class="card"><h2>Итого на счёте по месяцам</h2><p class="note">по вашему прогнозу</p><div id="cChart"></div></div>
+      <div class="card"><h2>Результат по месяцам</h2><p class="note">выделен выбранный горизонт</p><div class="tw" id="cMonths"></div></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2>Сценарии: весь портфель меняется одинаково</h2>
+      <p class="note">чистый результат, ₽, с учётом комиссий, НДФЛ и дивидендов из таблицы позиций; изменение цены — за год, на меньший срок пересчитывается пропорционально</p>
+      <div class="tw" id="cScen"></div>
+    </div>
+    <p class="foot">Упрощения: дивиденды начисляются равномерно по месяцам (на деле — на дату отсечки, после которой цена обычно падает); не учтены спред и плата за обслуживание счёта; НДФЛ считается по этой сделке.</p>
+  </section>
+
+  <p class="foot" id="foot">Данные: <a href="https://iss.moex.com" target="_blank" rel="noopener">ISS Московской биржи</a> (задержка ~15 минут), дивиденды — <a href="https://smart-lab.ru/dividends/index" target="_blank" rel="noopener">smart-lab.ru</a>. Не является инвестиционной рекомендацией.</p>
+</main>
+<datalist id="tickers"></datalist>
+<div id="tip"></div>
+
+<script>
+(() => {
+'use strict';
+const ISS = 'https://iss.moex.com/iss';
+const $ = id => document.getElementById(id);
+const S = {base:null, cur:{}, imoex:null, live:false, time:null, hist:null, sort:{k:'today',d:-1}};
+const LS = {get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+            set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+
+// ---------- formatting
+const nf = (d=2) => new Intl.NumberFormat('ru-RU',{minimumFractionDigits:d,maximumFractionDigits:d});
+const price = v => v==null||isNaN(v)?'—':(v>=1000?nf(1):v>=1?nf(2):v>=0.01?nf(4):nf(6)).format(v);
+const pct = v => v==null||!isFinite(v)?'—':(v>0?'+':'')+nf(2).format(v*100)+'%';
+const pct1 = v => v==null||!isFinite(v)?'—':nf(1).format(v*100)+'%';
+const rub = (v,d=0) => v==null||!isFinite(v)?'—':nf(d).format(v)+' ₽';
+const num = (v,d=0) => v==null||!isFinite(v)?'—':nf(d).format(v);
+const cls = v => v>0?'up':v<0?'down':'';
+const dfmt = s => s? s.slice(8,10)+'.'+s.slice(5,7)+'.'+s.slice(0,4):'—';
+const MON=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const median = a => {const b=a.filter(x=>isFinite(x)).sort((x,y)=>x-y);if(!b.length)return null;const m=b.length>>1;return b.length%2?b[m]:(b[m-1]+b[m])/2};
+const avg = a => {const b=a.filter(x=>isFinite(x));return b.length?b.reduce((s,x)=>s+x,0)/b.length:null};
+
+// ---------- data loading
+async function getJSON(u){const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw new Error(r.status);return r.json()}
+const tbl = b => b.data.map(r=>Object.fromEntries(b.columns.map((c,i)=>[c,r[i]])));
+
+async function loadLive(){
+  const j = await getJSON(`${ISS}/engines/stock/markets/shares/boards/TQBR/securities.json?iss.meta=off&iss.only=securities,marketdata`+
+    `&securities.columns=SECID,PREVLEGALCLOSEPRICE,PREVPRICE&marketdata.columns=SECID,LAST,LCURRENTPRICE,VALTODAY,SYSTIME`);
+  const sec = Object.fromEntries(tbl(j.securities).map(r=>[r.SECID,r]));
+  const md = tbl(j.marketdata); const cur={}; let sys='';
+  for(const m of md){const s=sec[m.SECID]||{};cur[m.SECID]={p:m.LAST??m.LCURRENTPRICE??null,prev:s.PREVLEGALCLOSEPRICE??s.PREVPRICE??null,val:(m.VALTODAY||0)/1e6};if(m.SYSTIME>sys)sys=m.SYSTIME}
+  const ix = await getJSON(`${ISS}/engines/stock/markets/index/securities/IMOEX.json?iss.meta=off&iss.only=marketdata&marketdata.columns=CURRENTVALUE,LASTCHANGE,LASTVALUE`);
+  const im = tbl(ix.marketdata)[0]||{};
+  return {cur, imoex:{last:im.CURRENTVALUE, prev: im.CURRENTVALUE!=null&&im.LASTCHANGE!=null? im.CURRENTVALUE-im.LASTCHANGE : im.LASTVALUE}, time:sys, live:true};
+}
+async function loadSnap(){
+  const j = await getJSON('data/latest.json');
+  const cur={}; for(const [t,[p,prev,val]] of Object.entries(j.prices)) cur[t]={p,prev,val};
+  return {cur, imoex:j.imoex, time:j.time, live:false};
+}
+async function loadAll(){
+  $('status').textContent='Загрузка данных…';
+  if(!S.base) S.base = await getJSON('data/base.json');
+  let d;
+  try{ d = await loadLive(); }
+  catch(e){ try{ d = await loadSnap(); }catch(e2){ $('status').textContent='Не удалось загрузить данные'; return; } }
+  Object.assign(S,d);
+  const t = S.live ? (S.time? 'биржа, '+dfmt(S.time.slice(0,10))+' '+S.time.slice(11,16)+' МСК (задержка ~15 мин)':'биржа') :
+                     'последний автоснимок '+dfmt(S.time.slice(0,10))+' '+S.time.slice(11,16)+' МСК';
+  $('status').innerHTML = `Цены: <b>${esc(t)}</b>${S.live?'':' — прямой доступ к бирже не удался'} · обновлено в ${new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})} · автообновление каждые 3 часа`;
+  compute(); renderEverything();
+}
+async function loadHist(){
+  if(S.hist) return S.hist;
+  const idx = await getJSON('data/history/index.json');
+  const H={times:[],imoex:[],px:{}};
+  for(const m of idx.months.slice(-3)){
+    const h = await getJSON(`data/history/${m}.json`); const n=H.times.length;
+    H.times.push(...h.times); H.imoex.push(...h.imoex);
+    const keys=new Set([...Object.keys(H.px),...Object.keys(h.px)]);
+    for(const k of keys){ const a=H.px[k]||Array(n).fill(null); a.push(...(h.px[k]||Array(h.times.length).fill(null))); H.px[k]=a; }
+  }
+  return S.hist=H;
+}
+
+// ---------- derived rows
+let ROWS=[];
+function compute(){
+  ROWS = S.base.stocks.map(s=>{
+    const c=S.cur[s.t]||{}; const p=c.p??null, prev=c.prev??null; const w=s.w;
+    const px = p ?? prev ?? w[3];
+    return {...s, p, prev, px, val:c.val||0,
+      today: p!=null&&prev? p/prev-1 : null,
+      since23: p!=null? p/w[3]-1 : (prev? prev/w[3]-1 : null),
+      w1:w[1]/w[0]-1, w2:w[2]/w[1]-1, w3:w[3]/w[2]-1, tot:w[3]/w[0]-1,
+      dy: s.div&&s.div.sum12? s.div.sum12/px : null,
+      nextD: s.div&&s.div.next? s.div.next[0]:null, nextA: s.div&&s.div.next? s.div.next[1]:null,
+      lastD: s.div&&s.div.last? s.div.last[0]:null, lastA: s.div&&s.div.last? s.div.last[1]:null};
+  });
+}
+function filtered(useSearch){
+  const sec=$('fSector').value, liq=$('fLiq').value, q=$('fSearch').value.trim().toLowerCase();
+  return ROWS.filter(r=>(sec==='Все'||r.s===sec)&&(liq==='Все'||r.liq===liq)&&(!useSearch||!q||(r.t+' '+r.n).toLowerCase().includes(q)));
+}
+
+// ---------- render: dashboard
+function kpi(l,v,s,c=''){return `<div class="card kpi"><div class="l">${l}</div><div class="v ${c}">${v}</div><div class="s">${s}</div></div>`}
+function renderDash(){
+  const F=filtered(false);
+  const ich = S.imoex&&S.imoex.last&&S.imoex.prev ? S.imoex.last/S.imoex.prev-1 : null;
+  const td=F.map(r=>r.today); const up=td.filter(x=>x>0).length, dn=td.filter(x=>x<0).length;
+  const base=S.base; const i3=base.imoex[3]/base.imoex[0]-1;
+  const allMed=median(ROWS.map(r=>r.today));
+  $('kpis').innerHTML =
+    kpi('Индекс МосБиржи', S.imoex&&S.imoex.last? num(S.imoex.last,2):'—', `<span class="${cls(ich)}">${pct(ich)}</span> за сегодня`) +
+    kpi('Медиана сегодня (фильтр)', pct(median(td)), `по всему рынку: ${pct(allMed)}`, cls(median(td))) +
+    kpi('Выросли / упали', `<span class="up">${up}</span> / <span class="down">${dn}</span>`, `из ${F.length} бумаг по фильтру`) +
+    kpi('Оборот сегодня', num(F.reduce((s,r)=>s+r.val,0),0)+' млн ₽', `весь рынок: ${num(ROWS.reduce((s,r)=>s+r.val,0),0)} млн ₽`) +
+    kpi('Индекс за 3 недели', pct(i3), '02.10 → 23.10', cls(i3)) +
+    kpi('Медиана за 3 недели (фильтр)', pct(median(F.map(r=>r.tot))), `с 23.10 по сейчас: ${pct(median(F.map(r=>r.since23)))}`, cls(median(F.map(r=>r.tot))));
+  const mini=(arr,key,showP=true)=>`<table><thead><tr><th class="l">#</th><th class="l">Компания</th>${showP?'<th>Цена</th>':''}<th>Изм.</th></tr></thead><tbody>`+
+    arr.map((r,i)=>`<tr><td class="l muted">${i+1}</td><td class="l name" data-t="${esc(r.t)}">${esc(r.n)}</td>${showP?`<td>${price(r.px)}</td>`:''}<td class="${cls(r[key])}">${pct(r[key])}</td></tr>`).join('')+'</tbody></table>';
+  const T=F.filter(r=>r.today!=null).sort((a,b)=>b.today-a.today);
+  $('topToday').innerHTML=mini(T.slice(0,10),'today'); $('botToday').innerHTML=mini(T.slice(-10).reverse(),'today');
+  const W=[...F].sort((a,b)=>b.tot-a.tot);
+  $('top3w').innerHTML=mini(W.slice(0,10),'tot',false); $('bot3w').innerHTML=mini(W.slice(-10).reverse(),'tot',false);
+  // sectors
+  const liq=$('fLiq').value; const secs=[...new Set(ROWS.map(r=>r.s))].sort();
+  const SR=secs.map(s=>{const a=ROWS.filter(r=>r.s===s&&(liq==='Все'||r.liq===liq));return {s,n:a.length,today:avg(a.map(r=>r.today)),since:avg(a.map(r=>r.since23)),tot:avg(a.map(r=>r.tot))}}).filter(x=>x.n);
+  const mx=Math.max(0.005,...SR.map(x=>Math.abs(x.today||0)));
+  $('secBars').innerHTML='<div class="rows">'+[...SR].sort((a,b)=>(b.today??-9)-(a.today??-9)).map(x=>{
+    const w=Math.abs(x.today||0)/mx*50; const pos=(x.today||0)>=0;
+    return `<div class="brow"><span title="${esc(x.s)}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.s)}</span><div class="btrack"><div class="z"></div><div class="bar" style="${pos?'left:50%':'right:50%'};width:${w}%;background:var(${pos?'--up':'--down'})"></div></div><span class="${cls(x.today)}" style="text-align:right">${pct(x.today)}</span></div>`}).join('')+'</div>';
+  $('secTable').innerHTML='<table><thead><tr><th class="l">Сектор</th><th>Бумаг</th><th>Сегодня</th><th>С 23.10</th><th>3 недели</th></tr></thead><tbody>'+
+    SR.map(x=>`<tr><td class="l">${esc(x.s)}</td><td>${x.n}</td><td class="${cls(x.today)}">${pct(x.today)}</td><td class="${cls(x.since)}">${pct(x.since)}</td><td class="${cls(x.tot)}">${pct(x.tot)}</td></tr>`).join('')+'</tbody></table>';
+}
+
+// ---------- render: all stocks
+const COLS=[
+  ['t','Тикер','l'],['n','Компания','l'],['s','Сектор','l'],['liq','Ликвидность','l'],
+  ['px','Цена, ₽'],['today','Сегодня'],['since23','С 23.10'],['w1','Нед. 1'],['w2','Нед. 2'],['w3','Нед. 3'],['tot','3 недели'],
+  ['val','Оборот сегодня, млн ₽'],['nextD','Ближ. отсечка'],['nextA','Дивиденд, ₽'],['lastD','Посл. отсечка'],['lastA','Дивиденд, ₽'],['months','Обычно платит','l'],['dy','Див. доход 12 мес.']];
+function renderStocks(){
+  const F=filtered(true); $('fCount').textContent=`${F.length} бумаг`;
+  const {k,d}=S.sort;
+  const val=r=>k==='months'?(r.div?r.div.months[0]||99:99):r[k];
+  F.sort((a,b)=>{const x=val(a),y=val(b);if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;return typeof x==='string'?d*x.localeCompare(y,'ru'):d*(x-y)});
+  const h='<table><thead><tr>'+COLS.map(([c,l,a])=>`<th class="s ${a||''}" data-k="${c}" aria-sort="${c===k?(d>0?'ascending':'descending'):'none'}">${l}</th>`).join('')+'</tr></thead><tbody>';
+  const b=F.map(r=>{
+    const pc=v=>`<td class="${v>0?'pos':v<0?'neg':''}">${pct(v)}</td>`;
+    return `<tr><td class="l">${esc(r.t)}</td><td class="l name" data-t="${esc(r.t)}">${esc(r.n)}</td><td class="l">${esc(r.s)}</td><td class="l">${esc(r.liq)}</td>`+
+      `<td>${r.p==null?'<span class="muted" title="сегодня сделок не было — показано закрытие">'+price(r.px)+'</span>':price(r.p)}</td>`+
+      pc(r.today)+pc(r.since23)+pc(r.w1)+pc(r.w2)+pc(r.w3)+pc(r.tot)+`<td>${num(r.val,1)}</td>`+
+      `<td class="${r.nextD?'next':'muted'}">${r.nextD?dfmt(r.nextD):'не объявлена'}</td><td class="${r.nextD?'next':''}">${r.nextA!=null?price(r.nextA):''}</td>`+
+      `<td>${r.lastD?dfmt(r.lastD):'—'}</td><td>${r.lastA!=null?price(r.lastA):''}</td>`+
+      `<td class="l">${r.div&&r.div.months.length?r.div.months.map(m=>MON[m-1]).join(', '):'<span class="muted">нет выплат</span>'}</td><td>${r.dy!=null?pct1(r.dy):''}</td></tr>`}).join('');
+  $('allTable').innerHTML=h+b+'</tbody></table>';
+}
+document.addEventListener('click',e=>{const th=e.target.closest('#allTable th.s');if(!th)return;const k=th.dataset.k;
+  S.sort = S.sort.k===k?{k,d:-S.sort.d}:{k,d:['t','n','s','liq','nextD','lastD','months'].includes(k)?1:-1};renderStocks()});
+
+// ---------- tooltip
+const tip=$('tip');
+function tipHtml(t){
+  const r=ROWS.find(x=>x.t===t); if(!r) return '';
+  const w=r.w, row=(a,b,c='')=>`<div class="r"><span class="muted">${a}</span><span class="${c}">${b}</span></div>`;
+  let h=`<h4>${esc(r.n)} (${esc(r.t)})</h4>`+row('Тип, лот',`${esc(r.ty)}, ${r.lot} шт.`)+row('Сектор',esc(r.s));
+  h+=row('Сейчас',r.p!=null?price(r.p)+' ₽':'нет сделок')+row('К вчера',pct(r.today),cls(r.today))+row('Закрытие вчера',price(r.prev)+' ₽');
+  h+='<div style="margin:6px 0 2px;font-weight:600">Закрытие по пятницам</div>';
+  S.base.weeks.forEach((d,i)=>h+=row(dfmt(d),price(w[i])+' ₽'+(i?` <span class="${cls(w[i]/w[i-1]-1)}">${pct(w[i]/w[i-1]-1)}</span>`:'')));
+  h+=row('За 3 недели',pct(r.tot),cls(r.tot))+row('С 23.10',pct(r.since23),cls(r.since23));
+  h+='<div style="margin:6px 0 2px;font-weight:600">Дивиденды</div>';
+  if(r.div){h+=row('Ближайшая',r.nextD?dfmt(r.nextD)+', '+price(r.nextA)+' ₽':'не объявлена',r.nextD?'up':'');
+    if(r.lastD)h+=row('Последняя',dfmt(r.lastD)+', '+price(r.lastA)+' ₽'); if(r.div.months.length)h+=row('Обычно',r.div.months.map(m=>MON[m-1]).join(', '));
+    if(r.dy!=null)h+=row('Доходность 12 мес.',pct1(r.dy));}
+  else h+='<div class="muted">не платила в 2024–2026</div>';
+  return h;
+}
+function showTip(el,x,y){tip.innerHTML=tipHtml(el.dataset.t);tip.style.display='block';const W=tip.offsetWidth,H=tip.offsetHeight;
+  let L=x+14,T=y+14; if(L+W>innerWidth-8)L=Math.max(8,x-W-14); if(T+H>innerHeight-8)T=Math.max(8,innerHeight-H-8); tip.style.left=L+'px';tip.style.top=T+'px'}
+document.addEventListener('mousemove',e=>{const el=e.target.closest('td.name');if(el)showTip(el,e.clientX,e.clientY);else tip.style.display='none'});
+document.addEventListener('touchstart',e=>{const el=e.target.closest('td.name');if(el){const t=e.touches[0];showTip(el,t.clientX,t.clientY)}else tip.style.display='none'},{passive:true});
+
+// ---------- history
+function lineChart(xs,ys,{w=720,h=240,fmt=v=>num(v,2),labels}={}){
+  const pts=ys.map((y,i)=>[i,y]).filter(p=>p[1]!=null&&isFinite(p[1]));
+  if(pts.length<1) return '<p class="muted">Пока нет данных.</p>';
+  const mn=Math.min(...pts.map(p=>p[1])),mx=Math.max(...pts.map(p=>p[1])),pad=(mx-mn)*0.08||Math.abs(mx)*0.01||1;
+  const lo=mn-pad,hi=mx+pad,L=64,R=12,T=12,B=26,n=Math.max(1,xs.length-1);
+  const X=i=>L+(w-L-R)*(xs.length===1?0.5:i/n),Y=v=>T+(h-T-B)*(1-(v-lo)/(hi-lo));
+  let g='';for(let k=0;k<=4;k++){const v=lo+(hi-lo)*k/4;g+=`<line x1="${L}" x2="${w-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end">${fmt(v)}</text>`}
+  const step=Math.max(1,Math.ceil(xs.length/6));let xl='';for(let i=0;i<xs.length;i+=step)xl+=`<text x="${X(i)}" y="${h-8}" text-anchor="middle">${esc(labels?labels[i]:xs[i])}</text>`;
+  const d=pts.map((p,j)=>(j?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(' ');
+  const dots=pts.map(p=>`<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="3" fill="var(--accent2)"><title>${esc(labels?labels[p[0]]:xs[p[0]])}: ${fmt(p[1])}</title></circle>`).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" role="img">${g}${xl}<path d="${d}" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>${dots}</svg>`;
+}
+async function renderHist(){
+  let H; try{H=await loadHist()}catch(e){$('hChart').innerHTML='<p class="muted">История пока недоступна.</p>';return}
+  const t=$('hTicker').value.trim().toUpperCase();
+  const ys = t==='IMOEX'? H.imoex : H.px[t];
+  if(!ys){$('hChart').innerHTML='<p class="muted">Нет такой бумаги в истории.</p>';$('hTable').innerHTML='';$('hInfo').textContent='';return}
+  const lab=H.times.map(s=>s.slice(8,10)+'.'+s.slice(5,7)+' '+s.slice(11,16));
+  const r=ROWS.find(x=>x.t===t);
+  $('hInfo').textContent=(t==='IMOEX'?'Индекс МосБиржи':r?r.n:t)+` · снимков: ${H.times.length}`;
+  $('hChart').innerHTML=lineChart(H.times,ys,{labels:lab,fmt:v=>price(v)});
+  $('hTable').innerHTML='<table><thead><tr><th class="l">Снимок</th><th>Значение</th><th>Изм. к предыдущему</th></tr></thead><tbody>'+
+    ys.map((v,i)=>[i,v]).reverse().map(([i,v])=>{const p=i?ys[i-1]:null;const c=v!=null&&p?v/p-1:null;return `<tr><td class="l">${lab[i]}</td><td>${price(v)}</td><td class="${cls(c)}">${pct(c)}</td></tr>`}).join('')+'</tbody></table>';
+}
+$('hTicker').addEventListener('change',renderHist);
+
+// ---------- calculator
+const NPOS=10;
+const C=LS.get('calc',{budget:100000,com:0.05,tax:13,date:'',hz:3,pos:[{t:'',amt:'',bp:'',fc:'',dv:''}]});
+function addMonths(d,n){const x=new Date(d);const day=x.getDate();x.setMonth(x.getMonth()+n);if(x.getDate()<day)x.setDate(0);return x}
+function buildCalc(){
+  $('cBudget').value=C.budget;$('cCom').value=C.com;$('cTax').value=C.tax;
+  $('cDate').value=C.date||new Date().toISOString().slice(0,10);
+  $('cHz').innerHTML=Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1} мес.</option>`).join('');$('cHz').value=C.hz;
+  while(C.pos.length<NPOS)C.pos.push({t:'',amt:'',bp:'',fc:'',dv:''});
+  $('cPos').innerHTML='<table><thead><tr><th class="l">Тикер</th><th class="l">Компания</th><th>Сумма, ₽</th><th>Цена сейчас</th><th>Цена покупки</th><th>Лот</th><th>Лотов</th><th>Акций</th><th>Покупка, ₽</th><th>Комиссия, ₽</th><th>Доля</th><th>Прогноз 12 мес., %</th><th>Дивиденды, % год.</th><th>Через горизонт, ₽</th><th>Результат до налогов, ₽</th></tr></thead><tbody>'+
+    C.pos.map((p,i)=>`<tr data-i="${i}"><td class="l"><input class="in" list="tickers" data-f="t" value="${esc(p.t)}" style="width:90px"></td><td class="l" data-o="n"></td>`+
+      `<td><input class="in" type="number" min="0" step="1000" data-f="amt" value="${esc(p.amt)}" style="width:100px"></td><td data-o="cp"></td>`+
+      `<td><input class="in" type="number" min="0" step="any" data-f="bp" value="${esc(p.bp)}" placeholder="текущая" style="width:95px"></td>`+
+      `<td data-o="lot"></td><td data-o="lots"></td><td data-o="sh"></td><td data-o="cost"></td><td data-o="fee"></td><td data-o="share"></td>`+
+      `<td><input class="in" type="number" step="0.1" data-f="fc" value="${esc(p.fc)}" placeholder="0" style="width:80px"></td>`+
+      `<td><input class="in" type="number" step="0.1" min="0" data-f="dv" value="${esc(p.dv)}" placeholder="0" style="width:80px"></td><td data-o="end"></td><td data-o="res"></td></tr>`).join('')+
+    '<tr data-o="tot" style="font-weight:600"><td class="l">Итого</td><td></td><td data-o="tamt"></td><td></td><td></td><td></td><td></td><td></td><td data-o="tcost"></td><td data-o="tfee"></td><td data-o="tshare"></td><td></td><td></td><td data-o="tend"></td><td data-o="tres"></td></tr></tbody></table>';
+}
+function readCalc(){
+  C.budget=+$('cBudget').value||0;C.com=+$('cCom').value||0;C.tax=+$('cTax').value||0;C.date=$('cDate').value;C.hz=+$('cHz').value||1;
+  document.querySelectorAll('#cPos tr[data-i]').forEach(tr=>{const p=C.pos[+tr.dataset.i];tr.querySelectorAll('input').forEach(inp=>p[inp.dataset.f]=inp.dataset.f==='t'?inp.value.trim().toUpperCase():inp.value)});
+  LS.set('calc',C);
+}
+function calc(){
+  if(!ROWS.length)return;
+  const com=C.com/100,tax=C.tax/100,hz=C.hz; const P=[];
+  document.querySelectorAll('#cPos tr[data-i]').forEach(tr=>{
+    const p=C.pos[+tr.dataset.i]; const r=ROWS.find(x=>x.t===p.t); const o=k=>tr.querySelector(`[data-o="${k}"]`);
+    if(!p.t){['n','cp','lot','lots','sh','cost','fee','share','end','res'].forEach(k=>o(k).textContent='');return}
+    if(!r){o('n').innerHTML='<span class="warn">нет в списке</span>';['cp','lot','lots','sh','cost','fee','share','end','res'].forEach(k=>o(k).textContent='');return}
+    const bp=+p.bp>0?+p.bp:r.px, amt=+p.amt||0;
+    const lots=Math.floor(amt/(bp*r.lot*(1+com))), sh=lots*r.lot, cost=sh*bp, fee=cost*com;
+    const fc=(+p.fc||0)/100, dv=(+p.dv||0)/100;
+    P.push({tr,o,r,bp,amt,lots,sh,cost,fee,fc,dv});
+    o('n').textContent=r.n;o('cp').textContent=price(r.px);o('lot').textContent=r.lot;o('lots').textContent=lots;o('sh').textContent=num(sh);o('cost').textContent=rub(cost,2);o('fee').textContent=rub(fee,2);
+  });
+  const I=P.reduce((s,x)=>s+x.cost,0), J=P.reduce((s,x)=>s+x.fee,0), A=P.reduce((s,x)=>s+x.amt,0), rest=C.budget-I-J;
+  P.forEach(x=>{const end=x.cost*Math.pow(1+x.fc,hz/12),dvd=x.cost*x.dv*hz/12;const res=x.cost?end-x.cost-x.fee-end*com+dvd:0;
+    x.o('share').textContent=I?pct1(x.cost/I):'';x.o('end').textContent=rub(end,2);x.o('res').innerHTML=`<span class="${cls(res)}">${rub(res,2)}</span>`});
+  const tot=k=>document.querySelector(`#cPos [data-o="${k}"]`);
+  const endH=P.reduce((s,x)=>s+x.cost*Math.pow(1+x.fc,hz/12),0), dvH=P.reduce((s,x)=>s+x.cost*x.dv*hz/12,0);
+  tot('tamt').textContent=rub(A);tot('tcost').textContent=rub(I,2);tot('tfee').textContent=rub(J,2);tot('tshare').textContent=I?'100%':'';tot('tend').textContent=rub(endH,2);
+  const tres=I?endH-I-J-endH*com+dvH:0; tot('tres').innerHTML=`<span class="${cls(tres)}">${rub(tres,2)}</span>`;
+  $('cCheck').innerHTML = rest<0?'<span class="warn">Превышен бюджет!</span>': A>C.budget?'<span class="warn">Сумма по бумагам больше бюджета</span>':`Остаток на счёте: <b>${rub(rest,2)}</b>`;
+  // months
+  const d0=C.date?new Date(C.date+'T12:00:00'):new Date(); const M=[];
+  for(let n=1;n<=12;n++){
+    const val=P.reduce((s,x)=>s+x.cost*Math.pow(1+x.fc,n/12),0);
+    const dvd=P.reduce((s,x)=>s+x.cost*x.dv,0)*n/12*(1-tax);
+    const fees=J+val*com, ndfl=Math.max(0,val-I-fees)*tax, net=val-I-fees-ndfl+dvd, inv=I+J;
+    const r=inv?net/inv:0; M.push({n,date:addMonths(d0,n),val,dvd,fees,ndfl,net,r,ann:inv?Math.pow(1+r,12/n)-1:0,acc:rest+val-val*com-ndfl+dvd});
+  }
+  const m=M[hz-1];
+  const card=(l,v,c='')=>`<div class="card kpi"><div class="l">${l}</div><div class="v ${c}" style="font-size:20px">${v}</div></div>`;
+  $('cSum').innerHTML=card('Горизонт',hz+' мес.')+card('Дата продажи',m.date.toLocaleDateString('ru-RU'))+card('Чистый результат',rub(m.net,0),cls(m.net))+
+    card('Доходность за период',pct(m.r),cls(m.r))+card('% годовых',pct(m.ann),cls(m.ann))+card('Итого на счёте',rub(m.acc,0));
+  $('cMonths').innerHTML='<table><thead><tr><th>Мес.</th><th>Дата продажи</th><th>Стоимость бумаг</th><th>Дивиденды (после налога)</th><th>Комиссии</th><th>НДФЛ</th><th>Чистый результат</th><th>Доходность</th><th>% годовых</th><th>На счёте</th></tr></thead><tbody>'+
+    M.map(x=>`<tr class="${x.n===hz?'hl':''}"><td>${x.n}</td><td>${x.date.toLocaleDateString('ru-RU')}</td><td>${rub(x.val)}</td><td>${rub(x.dvd)}</td><td>${rub(x.fees)}</td><td>${rub(x.ndfl)}</td><td class="${cls(x.net)}">${rub(x.net)}</td><td class="${cls(x.r)}">${pct(x.r)}</td><td class="${cls(x.ann)}">${pct(x.ann)}</td><td>${rub(x.acc)}</td></tr>`).join('')+'</tbody></table>';
+  $('cChart').innerHTML=I?lineChart(M.map(x=>x.n),M.map(x=>x.acc),{labels:M.map(x=>x.n+' мес.'),fmt:v=>num(v,0)}):'<p class="muted">Добавьте позиции, чтобы увидеть график.</p>';
+  // scenarios
+  const SC=[-0.3,-0.2,-0.1,0,0.1,0.2,0.3]; const dvY=P.reduce((s,x)=>s+x.cost*x.dv,0);
+  $('cScen').innerHTML='<table><thead><tr><th>Мес.</th>'+SC.map(s=>`<th>${pct(s)} за год</th>`).join('')+'</tr></thead><tbody>'+
+    M.map(x=>'<tr class="'+(x.n===hz?'hl':'')+'"><td>'+x.n+'</td>'+SC.map(s=>{const v=I*Math.pow(1+s,x.n/12);const pre=v-I-J-v*com;const net=I?pre-Math.max(0,pre)*tax+dvY*x.n/12*(1-tax):0;return `<td class="${net>0?'pos':net<0?'neg':''}">${rub(net)}</td>`}).join('')+'</tr>').join('')+'</tbody></table>';
+}
+$('tab-calc').addEventListener('input',()=>{readCalc();calc()});
+$('cClear').addEventListener('click',()=>{C.pos=[];buildCalc();readCalc();calc()});
+
+// ---------- UI wiring
+function renderEverything(){
+  const secs=['Все',...new Set(S.base.stocks.map(s=>s.s))].sort((a,b)=>a==='Все'?-1:b==='Все'?1:a.localeCompare(b,'ru'));
+  const sel=$('fSector'); if(sel.options.length!==secs.length){const v=sel.value||'Все';sel.innerHTML=secs.map(s=>`<option>${esc(s)}</option>`).join('');sel.value=v}
+  $('tickers').innerHTML='<option value="IMOEX">Индекс МосБиржи</option>'+S.base.stocks.map(s=>`<option value="${esc(s.t)}">${esc(s.n)}</option>`).join('');
+  renderDash(); renderStocks(); calc();
+  if(document.querySelector('#tab-hist.on')) renderHist();
+}
+['fSector','fLiq','fSearch'].forEach(id=>$(id).addEventListener('input',()=>{renderDash();renderStocks();saveUI()}));
+function saveUI(){LS.set('ui',{sec:$('fSector').value,liq:$('fLiq').value,tab:(document.querySelector('nav button.on')||{}).dataset?.tab})}
+$('nav').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+b.dataset.tab));
+  $('filters').style.display=(b.dataset.tab==='dash'||b.dataset.tab==='all')?'':'none';
+  if(b.dataset.tab==='hist')renderHist(); saveUI()});
+$('refresh').addEventListener('click',()=>{S.hist=null;loadAll()});
+$('theme').addEventListener('click',()=>{const r=document.documentElement;const cur=r.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');r.dataset.theme=cur==='dark'?'light':'dark';LS.set('theme',r.dataset.theme)});
+(()=>{const th=LS.get('theme',null);if(th)document.documentElement.dataset.theme=th})();
+
+
+// ---------- start
+buildCalc();
+const ui=LS.get('ui',null);
+loadAll().then(()=>{ if(ui){ if(ui.sec)$('fSector').value=ui.sec; if(ui.liq)$('fLiq').value=ui.liq; renderDash(); renderStocks();
+  const b=document.querySelector(`nav button[data-tab="${ui.tab}"]`); if(b) b.click(); }});
+setInterval(()=>{S.hist=null;loadAll()}, 3*3600*1000);
+})();
+</script>
+</body>
+</html>
